@@ -18,6 +18,8 @@ type OpenWeatherApi struct {
 	Lang string
 	// The weather data returned by the API call
 	Result Weather
+	// The elements to include in the JSON response
+	Fields []string
 }
 
 type Weather struct {
@@ -52,15 +54,88 @@ func New(
 	}
 }
 
-// returns the weather data as a JSON string
+// the fields to include in the response when returning a formatted response
+func (m *OpenWeatherApi) WithFields(
+// The fields to include in the response
+	fields []string,
+) (*OpenWeatherApi, error) {
+	m.Fields = fields
+	return m, nil
+}
+
+// returns the weather data as a string, formatted according to the fields provided
+func (m *OpenWeatherApi) AsString() string {
+
+	data, err := json.Marshal(m.Result)
+
+	if m.Fields == nil {
+		return string(data)
+	}
+
+	if err != nil {
+		return ""
+	}
+
+	selected := make([]string, 0)
+	var items map[string]interface{}
+	err = json.Unmarshal(data, &items)
+
+	if err != nil {
+		return ""
+	}
+
+	for _, field := range m.Fields {
+		for key, value := range items {
+			if key == field {
+				selected = append(selected, value.(string))
+			}
+		}
+	}
+
+	result := ""
+	for _, value := range selected {
+		result += value + " "
+	}
+
+	return result
+}
+
+// returns the weather data as a JSON string, formatted according to the fields provided
 func (m *OpenWeatherApi) AsJson() (dagger.JSON, error) {
 
 	data, err := json.Marshal(m.Result)
+
+	if m.Fields == nil {
+		return dagger.JSON(data), err
+	}
+
 	if err != nil {
 		return "", err
 	}
 
-	return dagger.JSON(data), nil
+	selected := make([]string, 0)
+	var items map[string]interface{}
+	err = json.Unmarshal(data, &items)
+
+	if err != nil {
+		return "", err
+	}
+
+	for _, field := range m.Fields {
+		for key, value := range items {
+			if key == field {
+				selected = append(selected, value.(string))
+			}
+		}
+	}
+
+	result, err := json.Marshal(selected)
+
+	if err != nil {
+		return "", err
+	}
+
+	return dagger.JSON(result), err
 }
 
 // retrieves the current weather for the given latitude and longitude
