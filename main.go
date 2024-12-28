@@ -27,18 +27,24 @@ func (m *OpenWeatherApi) getWeather(current *owm.CurrentWeatherData) (*Weather, 
 
 	unit := displayUnit(current.Unit)
 	icon := m.getIcon(current)
+	desc := current.Weather[0].Description
 
 	weather := &Weather{
-		Temp:        fmt.Sprintf("%g%s", current.Main.Temp, unit),
+		Temp:        fmt.Sprintf("%g", current.Main.Temp),
 		Unit:        unit,
-		Description: current.Weather[0].Description,
-		FeelsLike:   fmt.Sprintf("%g%s", current.Main.FeelsLike, unit),
+		Description: desc,
+		FeelsLike:   fmt.Sprintf("%g", current.Main.FeelsLike),
 		Icon:        icon,
 	}
 
-	weather.Summary = fmt.Sprintf("The current temperature in %s is %s. %s",
+	fullTemp := fmt.Sprintf("%s%s", weather.Temp, unit)
+	feelsLike := fmt.Sprintf("%s%s", weather.FeelsLike, unit)
+
+	weather.Summary = fmt.Sprintf("%s, %s, %s (%s) %s",
 		current.Name,
-		weather.Temp,
+		desc,
+		fullTemp,
+		feelsLike,
 		icon,
 	)
 
@@ -81,13 +87,13 @@ func (m *OpenWeatherApi) getIcon(current *owm.CurrentWeatherData) string {
 
 // New creates a new instance of the DaggerOpenWeatherApi
 func New(
-	// The apiKey to use for the OpenWeatherMap API
+// The apiKey to use for the OpenWeatherMap API
 	apiKey *dagger.Secret,
-	// The unit to use (C, F, or K)
-	// +default="C"
+// The unit to use (C, F, or K)
+// +default="C"
 	unit string,
-	// The 2-letter ISO code for the language to use (en, es, etc.)
-	// +default="en"
+// The 2-letter ISO code for the language to use (en, es, etc.)
+// +default="en"
 	lang string) *OpenWeatherApi {
 	return &OpenWeatherApi{
 		ApiKey: apiKey,
@@ -102,7 +108,7 @@ func displayUnit(unit string) string {
 		return "°C"
 	case "imperial", "F":
 		return "°F"
-	case "K":
+	case "kelvin", "K":
 		return "K"
 	default:
 		return unit
@@ -119,9 +125,9 @@ func (m *OpenWeatherApi) newCurrent() (*owm.CurrentWeatherData, error) {
 
 // Coordinates retrieves the current weather for the given latitude and longitude
 func (m *OpenWeatherApi) Coordinates(
-	// The latitude
+// The latitude
 	lat string,
-	// The longitude
+// The longitude
 	lon string) (*Weather, error) {
 
 	w, err := m.newCurrent()
@@ -154,7 +160,7 @@ func (m *OpenWeatherApi) Coordinates(
 
 // Location retrieves the current weather for the given location name
 func (m *OpenWeatherApi) Location(
-	// The name of the location (e,g "London,UK", "New York,US", "Tokyo,JP", "Sydney,AU")
+// The name of the location (e,g "London,UK", "New York,US", "Tokyo,JP", "Sydney,AU")
 	name string) (*Weather, error) {
 
 	w, err := m.newCurrent()
